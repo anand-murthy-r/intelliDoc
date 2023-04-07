@@ -1,4 +1,5 @@
 import kivy
+import requests.exceptions
 from kivy.app import App
 from kivy.uix.image import Image
 from kivy.uix.gridlayout import GridLayout
@@ -13,59 +14,99 @@ from kivy.animation import Animation
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
+from kivy.clock import Clock
+from kivy.graphics import RoundedRectangle,Color
+from kivy.lang import Builder
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.screenmanager import ScreenManager,Screen, FadeTransition, SlideTransition
-import win32gui
-import tkinter
+from kivy.uix.popup import Popup
 from tkinter import filedialog
-from PIL import Image as Img
+from requests import get,post
+from io import BytesIO
+from pdfdocument.document import PDFDocument
 
 
 #initialize kivy version
 kivy.require('2.1.0')
 
 
+url = "http://192.168.29.54:5000/api/v3?type=img"
 
+
+#Builder.load_file('appstyle.kv')
+
+window = Window
+
+class MyPopup(Popup):
+    def __init__(self,text,**kwargs):
+        super().__init__(**kwargs)
+        self.text = text
+        self.size_hint = (0.5,0.3)
+        self.title = 'Error Encountered'
+        self.title_color = (1,0,0,1)
+        self.content = Label(text=text)
+        self.opacity = 0.75
+
+    def open(self, *_args, **kwargs):
+        super().open()
+
+#custom button
 class MyButton(Button):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        self.font_name = 'AGENCYR'
+        self.font_name = 'fonts/AGENCYR'
         self.font_size = 20
         self.size_hint_y = None
         self.height = 50
         self.size_hint_x = None
         self.width = 200
         self.background_color[3] = 0.5
+        
+            
+
+#custom text input
+class MyTextInput(TextInput):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self.foreground_color = (1,1,1,0.75)
+        self.background_color = (0,0,0,0.5)
+        self.size_hint = (None,None)
+        self.height = 30
+        self.width = 200
+
 
 
 class SelectFilePopup:
     def __init__(self,title,initialdir):
         self.title = title
-        self.filename = None
-        self.title = title
+        self.path = None
         self.initialdir = initialdir
 
-    def open(self):
-        self.filename = filedialog.askopenfilename(
+    def open_file(self):
+        self.path = filedialog.askopenfilename(
             initialdir=self.initialdir,
             title=self.title,
             filetypes=(("PNG Files","*.png"),("JPG Files","*.jpg"))
         )
 
+    def open_dir(self):
+        self.path = filedialog.askdirectory(
+            initialdir=self.initialdir,
+            title=self.title
+        )
+
     def getDir(self):
-        return self.filename
+        return self.path
+
 
 class Interface(GridLayout):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         self.cols = 1
         with self.canvas.before:
-            # Load the image and use it as the texture of the Rectangle
             self.bg = Image(source='background.jpg').texture
-            # Set the size and position of the Rectangle to cover the entire GridLayout
             self.rect = Rectangle(texture=self.bg, pos=self.pos, size=self.size)
-            # Bind the size and position of the Rectangle to the size and position of the GridLayout
             self.bind(pos=self.update_rect, size=self.update_rect)
 
     def update_rect(self,*args):
@@ -83,43 +124,35 @@ class LoginPage(Screen):
             size_hint_y=None,
             height=120,
             size_hint_x=None,
-            width=300
+            width=300,
+            spacing=10
         )
         self.cols = 2
         self.Layout2.orientation = 'vertical'
         self.Layout2.cols = 3
         self.Layout3.cols = 2
         self.Layout3.add_widget(Label(
-            text="Enter Username ",
-            font_size=30,
-            font_name='AGENCYR'
+            text="Enter Username ".upper(),
+            font_size=25,
+            font_name='fonts/AGENCYR'
         )
         )
-        self.usernameInp = TextInput(multiline=False)
+        self.usernameInp = MyTextInput(multiline=False)
         self.Layout3.add_widget(self.usernameInp)
         self.Layout3.add_widget(Label(
-            text="Enter Password ",
-            font_size=30,
-            font_name='AGENCYR'
+            text="Enter Password ".upper(),
+            font_size=25,
+            font_name='fonts/AGENCYR'
         )
         )
-        self.passwordInp = TextInput(multiline=False, password=True)
+        self.passwordInp = MyTextInput(multiline=False, password=True)
         self.Layout3.add_widget(self.passwordInp)
-        self.loginButton = Button(
+        self.loginButton = MyButton(
             text='LOGIN',
-            size_hint_y=None,
-            height=50,
-            size_hint_x=None,
-            width=200,
             background_color=(0, 1, 0, 0.5)
         )
-        self.skipButton = Button(
-            text='SKIP LOGIN',
-            size_hint_y=None,
-            height=50,
-            size_hint_x=None,
-            width=200,
-            background_color=(1,1,1,0.5)
+        self.skipButton = MyButton(
+            text='SKIP LOGIN'
         )
         self.loginButton.bind(on_release=self.switch_layout)
         self.skipButton.bind(on_release=self.switch_layout)
@@ -131,7 +164,7 @@ class LoginPage(Screen):
             Label(
                 text="intelliDoc",
                 font_size=50,
-                font_name='BAUHS93'
+                font_name='fonts/BAUHS93.otf'
             )
         )
         self.add_widget(self.LoginLayout)
@@ -141,30 +174,32 @@ class LoginPage(Screen):
         self.manager.current = 'main'
 
 class MainScreen(Screen):
+
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         self.CenterLayout = FloatLayout()
-        self.MainLayout = BoxLayout(orientation='vertical', spacing=10)
+        #self.MainLayout = BoxLayout(orientation='vertical', spacing=10)
         StartButton = MyButton(
             text='START SCANNING',
-            background_color=(0, 1, 0, 0.5)
+            background_color=(0, 1, 0, 0.5),
+            pos_hint={'center_x':0.5,'center_y':0.6}
         )
         SettingButton = MyButton(
             text='Settings',
-            background_color=(1,1,1,0.5)
+            background_color=(1,1,1,0.5),
+            pos_hint={'center_x':0.5,'center_y':0.5}
         )
         ReturnButton = MyButton(
             text='Log out',
-            background_color=(1, 0, 0, 0.5)
+            background_color=(1, 0, 0, 0.5),
+            pos_hint={'center_x':0.5,'center_y':0.4}
         )
         StartButton.bind(on_release=self.switch_to_ScanScreen)
         ReturnButton.bind(on_release=self.switch_to_LoginScreen)
         SettingButton.bind(on_release=self.switch_to_SettingScreen)
-        self.MainLayout.add_widget(StartButton)
-        self.MainLayout.add_widget(SettingButton)
-        self.MainLayout.add_widget(ReturnButton)
-        self.CenterLayout.add_widget(self.MainLayout)
-        #self.MainLayout.pos_hint = {'center_x':0.5,'center_y':0.5}
+        self.CenterLayout.add_widget(StartButton)
+        self.CenterLayout.add_widget(SettingButton)
+        self.CenterLayout.add_widget(ReturnButton)
         self.add_widget(self.CenterLayout)
 
     def switch_to_LoginScreen(self, *args):
@@ -196,53 +231,85 @@ class SettingScreen(Screen):
 
 
 class ScanScreen(Screen):
-
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        popup = Popup(
-            title='Error',
-            content=None,
-            size_hint=(0.5, 0.5),
-            auto_dismiss=False
-        )
-        self.ScanLayout = FloatLayout()
+        self.Layout = BoxLayout(padding=30)
+        self.ButtonsLayout = FloatLayout()
+        self.imagedisplay = None
+        self.GenerateButton = None
         self.BrowseButton = MyButton(
-            text='BROWSE IMAGE',
-            background_color=(1,1,0,0.5),
-            pos_hint={'center_x': 0.5,'center_y': 0.5}
+            text="BROWSE IMAGE",
+            pos_hint={'center_x':0.5,'center_y':0.6},
+            background_color=(1,1,0,0.5)
         )
         self.BackButton = MyButton(
-            text='BACK'
+            text="CANCEL",
+            background_color=(1,0,0,0.5)
         )
-        self.BackButton.bind(on_release=self.switch_to_MainScreen)
         self.BrowseButton.bind(on_release=self.Work)
-        self.add_widget(self.BrowseButton)
-        self.add_widget(self.BackButton)
-        self.add_widget(self.ScanLayout)
-
+        self.BackButton.bind(on_release=self.switch_to_MainScreen)
+        self.ButtonsLayout.add_widget(self.BrowseButton)
+        self.ButtonsLayout.add_widget(self.BackButton)
+        self.Layout.add_widget(self.ButtonsLayout)
+        self.add_widget(self.Layout)
 
     def switch_to_MainScreen(self,*args):
         self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'main'
+        if self.imagedisplay is not None:
+            self.Layout.remove_widget(self.imagedisplay)
+        if self.GenerateButton is not None:
+            self.ButtonsLayout.remove_widget(self.GenerateButton)
+            self.GenerateButton = None
 
     def Work(self,*args):
-        filename = self.openPopup()
-        try:
-            img = Img.open(filename)
-            img.show()
-        except AttributeError:
-            pass
+        filename = ScanScreen.askfile()
+        if filename != '':
+            try:
+                if self.imagedisplay is not None:
+                    self.Layout.remove_widget(self.imagedisplay)
+                if self.GenerateButton is None:
+                    self.GenerateButton = MyButton(
+                        text='GENERATE QNA',
+                        pos_hint={'center_x':0.5,'center_y':0.5},
+                        background_color=(0,1,1,0.5)
+                    )
+                    self.GenerateButton.bind(
+                        on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ConnectServer(url,filename))
+                    )
+                    self.ButtonsLayout.add_widget(self.GenerateButton)
+                self.imagedisplay = Image(source=filename,pos_hint={'center_x':0.5,'center_y':0.5})
+                self.Layout.add_widget(self.imagedisplay)
+            except AttributeError:
+                pass
 
-    def openPopup(self,*args):
+    @staticmethod
+    def askfile():
         popup = SelectFilePopup("Select Image","/")
-        popup.open()
+        popup.open_file()
         return popup.getDir()
+
+    @staticmethod
+    def askdir():
+        popup = SelectFilePopup("Select Directory","/")
+        return popup.open_dir()
+
+    def ConnectServer(self,server_url,files,*args):
+        try:
+            r = post(server_url,files={'file':open(files,'rb')})
+            print(r.text)
+        except requests.exceptions.ConnectionError:
+            print("[CONNECTION ERROR] Not able to connect to Server.")
+            popup = MyPopup("Unable to connect to the server. Please try again later.")
+            popup.open()
+            self.switch_to_MainScreen()
 
 
 
 
 class MyApp(App):
     def build(self):
+        self.title = 'intelliDoc'
         ParentLayout = Interface()
         screen_manager = ScreenManager()
         loginScreen = LoginPage(name='login')
