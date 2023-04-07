@@ -39,12 +39,11 @@ url = "http://192.168.29.54:5000/api/v3?type=img"
 window = Window
 
 class MyPopup(Popup):
-    def __init__(self,text,**kwargs):
+    def __init__(self,title,text,**kwargs):
         super().__init__(**kwargs)
         self.text = text
         self.size_hint = (0.5,0.3)
-        self.title = 'Error Encountered'
-        self.title_color = (1,0,0,1)
+        self.title = title
         self.content = Label(text=text)
         self.opacity = 0.75
 
@@ -95,6 +94,7 @@ class SelectFilePopup:
             initialdir=self.initialdir,
             title=self.title
         )
+        return self.path
 
     def getDir(self):
         return self.path
@@ -237,6 +237,7 @@ class ScanScreen(Screen):
         self.ButtonsLayout = FloatLayout()
         self.imagedisplay = None
         self.GenerateButton = None
+        self.jsondata = None
         self.BrowseButton = MyButton(
             text="BROWSE IMAGE",
             pos_hint={'center_x':0.5,'center_y':0.6},
@@ -275,7 +276,7 @@ class ScanScreen(Screen):
                         background_color=(0,1,1,0.5)
                     )
                     self.GenerateButton.bind(
-                        on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ConnectServer(url,filename))
+                        on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ProcessDocument(url,filename))
                     )
                     self.ButtonsLayout.add_widget(self.GenerateButton)
                 self.imagedisplay = Image(source=filename,pos_hint={'center_x':0.5,'center_y':0.5})
@@ -295,14 +296,38 @@ class ScanScreen(Screen):
         return popup.open_dir()
 
     def ConnectServer(self,server_url,files,*args):
+        r = post(server_url,files={'file':open(files,'rb')})
+        return r.json()
+    def ProcessDocument(self,server_url,filepath,*args):
         try:
-            r = post(server_url,files={'file':open(files,'rb')})
-            print(r.text)
-        except requests.exceptions.ConnectionError:
-            print("[CONNECTION ERROR] Not able to connect to Server.")
-            popup = MyPopup("Unable to connect to the server. Please try again later.")
+            self.jsondata = self.ConnectServer(server_url,filepath)
+            f = BytesIO()
+            pdf = PDFDocument(f)
+            pdf.init_report()
+            pdf.h1('Questions:')
+            for index, i in enumerate(self.jsondata.get('mc_qs').get('questions'), 1):
+                pdf.p(f"{index}. {i.get('question_statement')}")
+            pdf.h1('Answers: ')
+            for index, i in enumerate(self.jsondata.get('mc_qs').get('questions'), 1):
+                pdf.p(f"{index}. {i.get('answer')}")
+            pdf.generate()
+            dir = ScanScreen.askdir()
+            with open(f'{dir}/doc.pdf', 'wb') as file:
+                file.write(f.getvalue())
+            popup = MyPopup("Success","Document generated successfully.",title_color=(0,1,0,1))
             popup.open()
             self.switch_to_MainScreen()
+        except requests.exceptions.ConnectionError:
+            popup = MyPopup("Error","Unable to connect to the server. Please try again later.",title_color=(1,0,0,1))
+            popup.open()
+            self.switch_to_MainScreen()
+            return
+        except PermissionError:
+            popup = MyPopup("Error","Cannot write file: Permission denied.",title_color=(1,0,0,1))
+            popup.open()
+            self.switch_to_MainScreen()
+
+
 
 
 
