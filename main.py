@@ -25,13 +25,13 @@ from tkinter import filedialog
 from requests import get,post
 from io import BytesIO
 from pdfdocument.document import PDFDocument
-
+from random import shuffle
 
 #initialize kivy version
 kivy.require('2.1.0')
 
-
-url = "http://192.168.29.54:5000/api/v3?type=img"
+ip = "127.0.0.1"
+url = f"http://{ip}:5000/api/v3?type=img&full=true"
 
 
 #Builder.load_file('appstyle.kv')
@@ -304,12 +304,28 @@ class ScanScreen(Screen):
             f = BytesIO()
             pdf = PDFDocument(f)
             pdf.init_report()
-            pdf.h1('Questions:')
+            pdf.h1('MCQ Questions:')
             for index, i in enumerate(self.jsondata.get('mc_qs').get('questions'), 1):
                 pdf.p(f"{index}. {i.get('question_statement')}")
+                int_list = [j for j in i.get('options')]
+                int_list.append(i.get('answer'))
+                shuffle(int_list)
+                pdf.p(f"• {' • '.join(int_list)}\n")
             pdf.h1('Answers: ')
             for index, i in enumerate(self.jsondata.get('mc_qs').get('questions'), 1):
                 pdf.p(f"{index}. {i.get('answer')}")
+            pdf.p("\n")
+            pdf.h1('Single Questions:')
+            for index, i in enumerate(self.jsondata.get('short_qs').get('questions'), 1):
+                pdf.p(f"{index}. {i.get('Question')}")
+            pdf.p("\n")
+            pdf.h1('Answers: ')
+            for index, i in enumerate(self.jsondata.get('short_qs').get('questions'), 1):
+                pdf.p(f"{index}. {i.get('Answer')}")
+            pdf.p("\n")
+            pdf.h1('Extracted Text:')
+            pdf.p(f"{self.jsondata.get('text')['input_text']}")
+            
             pdf.generate()
             dir = ScanScreen.askdir()
             with open(f'{dir}/doc.pdf', 'wb') as file:
@@ -326,6 +342,8 @@ class ScanScreen(Screen):
             popup = MyPopup("Error","Cannot write file: Permission denied.",title_color=(1,0,0,1))
             popup.open()
             self.switch_to_MainScreen()
+        except Exception as e:
+            raise e
 
 
 
