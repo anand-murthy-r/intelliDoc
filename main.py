@@ -30,7 +30,7 @@ from random import shuffle
 #initialize kivy version
 kivy.require('2.1.0')
 
-ip = "127.0.0.1"
+ip = "192.168.135.237"
 url = f"http://{ip}:5000/api/v3?type=img&full=true"
 
 
@@ -86,7 +86,7 @@ class SelectFilePopup:
         self.path = filedialog.askopenfilename(
             initialdir=self.initialdir,
             title=self.title,
-            filetypes=(("PNG Files","*.png"),("JPG Files","*.jpg"))
+            filetypes=(("PNG Files","*.png"),("JPG Files","*.jpg"),("Word Files","*.docx"))
         )
 
     def open_dir(self):
@@ -239,17 +239,23 @@ class ScanScreen(Screen):
         self.GenerateButton = None
         self.jsondata = None
         self.BrowseButton = MyButton(
-            text="BROWSE IMAGE",
+            text="SCAN IMAGE",
             pos_hint={'center_x':0.5,'center_y':0.6},
             background_color=(1,1,0,0.5)
+        )
+        self.TextButton = MyButton(
+            text="SCAN TEXT",
+            pos_hint={'center_x':0.5,'center_y':0.5}
         )
         self.BackButton = MyButton(
             text="CANCEL",
             background_color=(1,0,0,0.5)
         )
         self.BrowseButton.bind(on_release=self.Work)
+        self.TextButton.bind(on_release=self.switch_to_TextInput)
         self.BackButton.bind(on_release=self.switch_to_MainScreen)
         self.ButtonsLayout.add_widget(self.BrowseButton)
+        self.ButtonsLayout.add_widget(self.TextButton)
         self.ButtonsLayout.add_widget(self.BackButton)
         self.Layout.add_widget(self.ButtonsLayout)
         self.add_widget(self.Layout)
@@ -262,6 +268,10 @@ class ScanScreen(Screen):
         if self.GenerateButton is not None:
             self.ButtonsLayout.remove_widget(self.GenerateButton)
             self.GenerateButton = None
+
+    def switch_to_TextInput(self,*args):
+        self.manager.transition = SlideTransition(direction='left')
+        self.manager.current = 'text'
 
     def Work(self,*args):
         filename = ScanScreen.askfile()
@@ -345,8 +355,30 @@ class ScanScreen(Screen):
         except Exception as e:
             raise e
 
+class TextScreen(Screen):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self.Layout = BoxLayout(orientation='vertical')
+        txtinp = TextInput(
+            multiline=True,
+            size_hint=(1,1),
+            foreground_color=(1, 1, 1, 0.75),
+            background_color=(0, 0, 0, 0.5)
+        )
+        self.Layout2 = FloatLayout()
+        self.BackButton = MyButton(
+            text="CANCEL",
+            background_color=(1,0,0,0.5)
+        )
+        self.BackButton.bind(on_release=self.switch_to_ScanScreen)
+        self.Layout2.add_widget(self.BackButton)
+        self.Layout.add_widget(txtinp)
+        self.Layout.add_widget(self.Layout2)
+        self.add_widget(self.Layout)
 
-
+    def switch_to_ScanScreen(self, *args):
+        self.manager.transition = SlideTransition(direction='left')
+        self.manager.current = 'scan'
 
 
 
@@ -359,10 +391,12 @@ class MyApp(App):
         mainScreen = MainScreen(name='main')
         mainSettingScreen = SettingScreen(name='setting')
         scanScreen = ScanScreen(name='scan')
+        textScreen = TextScreen(name='text')
         screen_manager.add_widget(loginScreen)
         screen_manager.add_widget(mainScreen)
         screen_manager.add_widget(mainSettingScreen)
         screen_manager.add_widget(scanScreen)
+        screen_manager.add_widget(textScreen)
         ParentLayout.add_widget(screen_manager)
         return ParentLayout
 
