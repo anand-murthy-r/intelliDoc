@@ -30,8 +30,8 @@ from random import shuffle
 #initialize kivy version
 kivy.require('2.1.0')
 
-ip = "192.168.135.237"
-url = f"http://{ip}:5000/api/v3?type=img&full=true"
+ip = "127.0.0.1"
+url = f"http://{ip}:5000/api/v3?full=true"
 
 
 #Builder.load_file('appstyle.kv')
@@ -86,7 +86,14 @@ class SelectFilePopup:
         self.path = filedialog.askopenfilename(
             initialdir=self.initialdir,
             title=self.title,
-            filetypes=(("PNG Files","*.png"),("JPG Files","*.jpg"),("Word Files","*.docx"))
+            filetypes=(("PNG Files","*.png"),("JPG Files","*.jpg"))
+        )
+
+    def open_docx(self):
+        self.path = filedialog.askopenfilename(
+            initialdir=self.initialdir,
+            title=self.title,
+            filetypes=(("Word Files","*.docx"),("Word Files","*.docx"))
         )
 
     def open_dir(self):
@@ -105,7 +112,7 @@ class Interface(GridLayout):
         super().__init__(**kwargs)
         self.cols = 1
         with self.canvas.before:
-            self.bg = Image(source='background.jpg').texture
+            self.bg = Image(source='assets/background.jpg').texture
             self.rect = Rectangle(texture=self.bg, pos=self.pos, size=self.size)
             self.bind(pos=self.update_rect, size=self.update_rect)
 
@@ -238,14 +245,27 @@ class ScanScreen(Screen):
         self.imagedisplay = None
         self.GenerateButton = None
         self.jsondata = None
+        self.RealBrowseButton = MyButton(
+            text="BROWSE FILE",
+            pos_hint={'center_x':0.5,'center_y':0.6},
+            background_color=(1,1,0,0.5)
+        )
         self.BrowseButton = MyButton(
             text="SCAN IMAGE",
             pos_hint={'center_x':0.5,'center_y':0.6},
             background_color=(1,1,0,0.5)
         )
         self.TextButton = MyButton(
-            text="SCAN TEXT",
-            pos_hint={'center_x':0.5,'center_y':0.5}
+            text="TEXT PROMPT",
+            pos_hint={'center_x':0.5,'center_y':0.5},
+            background_color=(1,1,0,0.5)
+
+        )
+        self.DocxButton = MyButton(
+            text="DOCUMENT FILE",
+            pos_hint={'center_x':0.5,'center_y':0.4},
+            background_color=(1,1,0,0.5)
+
         )
         self.BackButton = MyButton(
             text="CANCEL",
@@ -253,9 +273,11 @@ class ScanScreen(Screen):
         )
         self.BrowseButton.bind(on_release=self.Work)
         self.TextButton.bind(on_release=self.switch_to_TextInput)
+        self.DocxButton.bind(on_release=self.switch_to_docx)
         self.BackButton.bind(on_release=self.switch_to_MainScreen)
         self.ButtonsLayout.add_widget(self.BrowseButton)
         self.ButtonsLayout.add_widget(self.TextButton)
+        self.ButtonsLayout.add_widget(self.DocxButton)
         self.ButtonsLayout.add_widget(self.BackButton)
         self.Layout.add_widget(self.ButtonsLayout)
         self.add_widget(self.Layout)
@@ -267,7 +289,13 @@ class ScanScreen(Screen):
             self.Layout.remove_widget(self.imagedisplay)
         if self.GenerateButton is not None:
             self.ButtonsLayout.remove_widget(self.GenerateButton)
+            self.ButtonsLayout.remove_widget(self.BrowButton)
             self.GenerateButton = None
+        self.ButtonsLayout.clear_widgets()
+        self.ButtonsLayout.add_widget(self.BrowseButton)
+        self.ButtonsLayout.add_widget(self.TextButton)
+        self.ButtonsLayout.add_widget(self.DocxButton)
+        self.ButtonsLayout.add_widget(self.BackButton)
 
     def switch_to_TextInput(self,*args):
         self.manager.transition = SlideTransition(direction='left')
@@ -280,16 +308,57 @@ class ScanScreen(Screen):
                 if self.imagedisplay is not None:
                     self.Layout.remove_widget(self.imagedisplay)
                 if self.GenerateButton is None:
+                    self.ButtonsLayout.remove_widget(self.BrowseButton)
+                    self.ButtonsLayout.remove_widget(self.TextButton)
+                    self.ButtonsLayout.remove_widget(self.DocxButton)
+                    self.BrowButton = MyButton(
+                        text='BROWSE FILE',
+                        pos_hint={'center_x':0.5,'center_y':0.6},
+                        background_color=(0,1,1,0.5)
+                    )
                     self.GenerateButton = MyButton(
                         text='GENERATE QNA',
                         pos_hint={'center_x':0.5,'center_y':0.5},
                         background_color=(0,1,1,0.5)
                     )
                     self.GenerateButton.bind(
-                        on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ProcessDocument(url,filename))
+                        on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ProcessDocument(url,filename,'img'))
                     )
+                    self.BrowButton.bind(on_release=self.Work)
                     self.ButtonsLayout.add_widget(self.GenerateButton)
+                    self.ButtonsLayout.add_widget(self.BrowButton)
                 self.imagedisplay = Image(source=filename,pos_hint={'center_x':0.5,'center_y':0.5})
+                self.Layout.add_widget(self.imagedisplay)
+            except AttributeError:
+                pass
+    
+    def switch_to_docx(self,*args):
+        filename = ScanScreen.askdocx()
+        if filename != '':
+            try:
+                if self.imagedisplay is not None:
+                    self.Layout.remove_widget(self.imagedisplay)
+                if self.GenerateButton is None:
+                    self.ButtonsLayout.remove_widget(self.BrowseButton)
+                    self.ButtonsLayout.remove_widget(self.TextButton)
+                    self.ButtonsLayout.remove_widget(self.DocxButton)
+                    self.BrowButton = MyButton(
+                        text='BROWSE FILE',
+                        pos_hint={'center_x':0.5,'center_y':0.6},
+                        background_color=(0,1,1,0.5)
+                    )
+                    self.GenerateButton = MyButton(
+                        text='GENERATE QNA',
+                        pos_hint={'center_x':0.5,'center_y':0.5},
+                        background_color=(0,1,1,0.5)
+                    )
+                    self.GenerateButton.bind(
+                        on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ProcessDocument(url,filename,'docx'))
+                    )
+                    self.BrowButton.bind(on_release=self.switch_to_docx)
+                    self.ButtonsLayout.add_widget(self.GenerateButton)
+                    self.ButtonsLayout.add_widget(self.BrowButton)
+                self.imagedisplay = Image(source='assets/docx.png',pos_hint={'center_x':0.5,'center_y':0.5})
                 self.Layout.add_widget(self.imagedisplay)
             except AttributeError:
                 pass
@@ -299,49 +368,68 @@ class ScanScreen(Screen):
         popup = SelectFilePopup("Select Image","/")
         popup.open_file()
         return popup.getDir()
+    
+    @staticmethod
+    def askdocx():
+        popup = SelectFilePopup("Select Document File","/")
+        popup.open_docx()
+        return popup.getDir()
 
     @staticmethod
     def askdir():
         popup = SelectFilePopup("Select Directory","/")
         return popup.open_dir()
 
-    def ConnectServer(self,server_url,files,*args):
-        r = post(server_url,files={'file':open(files,'rb')})
+    @staticmethod
+    def pdf_gen(data):
+        f = BytesIO()
+        pdf = PDFDocument(f)
+        pdf.init_report()
+        pdf.h1('MCQ Questions:')
+        for index, i in enumerate(data.get('mc_qs').get('questions'), 1):
+            pdf.p(f"{index}. {i.get('question_statement')}")
+            int_list = [j for j in i.get('options')]
+            int_list.append(i.get('answer'))
+            shuffle(int_list)
+            pdf.p(f"• {' • '.join(int_list)}\n")
+        pdf.h1('Answers: ')
+        for index, i in enumerate(data.get('mc_qs').get('questions'), 1):
+            pdf.p(f"{index}. {i.get('answer')}")
+        pdf.p("\n")
+        pdf.h1('Single Questions:')
+        for index, i in enumerate(data.get('short_qs').get('questions'), 1):
+            pdf.p(f"{index}. {i.get('Question')}")
+        pdf.p("\n")
+        pdf.h1('Answers: ')
+        for index, i in enumerate(data.get('short_qs').get('questions'), 1):
+            pdf.p(f"{index}. {i.get('Answer')}")
+        pdf.p("\n")
+        pdf.h1('Extracted Text:')
+        pdf.p(f"{data.get('text')['input_text']}")
+        pdf.generate()
+        dir = ScanScreen.askdir()
+        with open(f'{dir}/doc.pdf', 'wb') as file:
+            file.write(f.getvalue())
+    
+    @staticmethod
+    def ConnectServer(server_url,files=None,_type=None):
+        print(_type)
+        if _type!='text':
+            r = post(server_url+f"&type={_type}",files={'file':open(files,'rb')})
+        else:
+            r = post(server_url+f"&type={_type}",json={'text':files})
         return r.json()
-    def ProcessDocument(self,server_url,filepath,*args):
+    
+
+    def ProcessDocument(self,server_url,filepath,_type):
         try:
-            self.jsondata = self.ConnectServer(server_url,filepath)
-            f = BytesIO()
-            pdf = PDFDocument(f)
-            pdf.init_report()
-            pdf.h1('MCQ Questions:')
-            for index, i in enumerate(self.jsondata.get('mc_qs').get('questions'), 1):
-                pdf.p(f"{index}. {i.get('question_statement')}")
-                int_list = [j for j in i.get('options')]
-                int_list.append(i.get('answer'))
-                shuffle(int_list)
-                pdf.p(f"• {' • '.join(int_list)}\n")
-            pdf.h1('Answers: ')
-            for index, i in enumerate(self.jsondata.get('mc_qs').get('questions'), 1):
-                pdf.p(f"{index}. {i.get('answer')}")
-            pdf.p("\n")
-            pdf.h1('Single Questions:')
-            for index, i in enumerate(self.jsondata.get('short_qs').get('questions'), 1):
-                pdf.p(f"{index}. {i.get('Question')}")
-            pdf.p("\n")
-            pdf.h1('Answers: ')
-            for index, i in enumerate(self.jsondata.get('short_qs').get('questions'), 1):
-                pdf.p(f"{index}. {i.get('Answer')}")
-            pdf.p("\n")
-            pdf.h1('Extracted Text:')
-            pdf.p(f"{self.jsondata.get('text')['input_text']}")
-            
-            pdf.generate()
-            dir = ScanScreen.askdir()
-            with open(f'{dir}/doc.pdf', 'wb') as file:
-                file.write(f.getvalue())
+            self.jsondata = self.ConnectServer(server_url,filepath,_type)
+            self.pdf_gen(self.jsondata)
             popup = MyPopup("Success","Document generated successfully.",title_color=(0,1,0,1))
             popup.open()
+            self.ButtonsLayout.add_widget(self.BrowseButton)
+            self.ButtonsLayout.add_widget(self.TextButton)
+            self.ButtonsLayout.add_widget(self.DocxButton)
             self.switch_to_MainScreen()
         except requests.exceptions.ConnectionError:
             popup = MyPopup("Error","Unable to connect to the server. Please try again later.",title_color=(1,0,0,1))
@@ -365,6 +453,15 @@ class TextScreen(Screen):
             foreground_color=(1, 1, 1, 0.75),
             background_color=(0, 0, 0, 0.5)
         )
+        self.GenerateButton = MyButton(
+            text='GENERATE QNA',
+            pos_hint={'center_x':0.5,'center_y':0.5},
+            background_color=(0,1,1,0.5)
+        )
+
+        self.GenerateButton.bind(
+            on_release=lambda instance: Clock.schedule_once(lambda unknown:self.ProcessDocument(url,txtinp.text,'text'))
+        )
         self.Layout2 = FloatLayout()
         self.BackButton = MyButton(
             text="CANCEL",
@@ -373,13 +470,35 @@ class TextScreen(Screen):
         self.BackButton.bind(on_release=self.switch_to_ScanScreen)
         self.Layout2.add_widget(self.BackButton)
         self.Layout.add_widget(txtinp)
+        self.Layout.add_widget(self.GenerateButton)
         self.Layout.add_widget(self.Layout2)
         self.add_widget(self.Layout)
 
     def switch_to_ScanScreen(self, *args):
         self.manager.transition = SlideTransition(direction='left')
         self.manager.current = 'scan'
-
+    
+    def ProcessDocument(self,server_url,filepath,_type,*args):
+        try:
+            self.jsondata = ScanScreen.ConnectServer(server_url,filepath,_type)
+            ScanScreen.pdf_gen(self.jsondata)
+            popup = MyPopup("Success","Document generated successfully.",title_color=(0,1,0,1))
+            popup.open()
+            # self.ButtonsLayout.add_widget(self.BrowseButton)
+            # self.ButtonsLayout.add_widget(self.TextButton)
+            # self.ButtonsLayout.add_widget(self.DocxButton)
+            self.switch_to_ScanScreen()
+        except requests.exceptions.ConnectionError:
+            popup = MyPopup("Error","Unable to connect to the server. Please try again later.",title_color=(1,0,0,1))
+            popup.open()
+            self.switch_to_MainScreen()
+            return
+        except PermissionError:
+            popup = MyPopup("Error","Cannot write file: Permission denied.",title_color=(1,0,0,1))
+            popup.open()
+            self.switch_to_MainScreen()
+        except Exception as e:
+            raise e
 
 
 class MyApp(App):
