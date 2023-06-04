@@ -477,7 +477,9 @@ class TextScreen(Screen):
     def switch_to_ScanScreen(self, *args):
         self.manager.transition = SlideTransition(direction='left')
         self.manager.current = 'scan'
-    
+    def switch_to_MainScreen(self,*args):
+        self.manager.transition = SlideTransition(direction='right')
+        self.manager.current = 'main'
     def ProcessDocument(self,server_url,filepath,_type,*args):
         try:
             self.jsondata = ScanScreen.ConnectServer(server_url,filepath,_type)
