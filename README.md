@@ -1,4 +1,4 @@
-# IntelliDoc 🧠📄
+# IntelliDoc 
 
 **AI-Powered Question & Answer Generator**
 
@@ -8,15 +8,15 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ## 🚀 Features
 
-* 📄 Accepts textual documents as input
-* 🔍 Extracts text using **Tesseract OCR**
-* 🧠 Generates context-aware questions and answers using **QuestGenAI**
-* ⚡ Fast, automated, and easy to use
-* 🎓 Ideal for educational and academic use cases
+*  Accepts textual documents as input
+*  Extracts text using **Tesseract OCR**
+*  Generates context-aware questions and answers using **QuestGenAI**
+*  Fast, automated, and easy to use
+*  Ideal for educational and academic use cases
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 * **Language:** Python
 * **OCR:** Tesseract-OCR
@@ -25,7 +25,7 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ---
 
-## 📂 How It Works
+##  How It Works
 
 1. Upload a document (text or scanned image).
 2. Extract text from the document using **Tesseract OCR**.
@@ -35,7 +35,7 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ---
 
-## 🎯 Use Cases
+##  Use Cases
 
 * Automated question paper generation
 * Study material creation
@@ -51,7 +51,7 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ---
 
-## 📌 Future Enhancements
+##  Future Enhancements
 
 * Support for PDF and DOCX files
 * Difficulty-level based question generation
@@ -60,7 +60,7 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ---
 
-## 🤝 Contributions
+##  Contributions
 
 Contributions are welcome! Feel free to fork this repository and submit a pull request.
 
