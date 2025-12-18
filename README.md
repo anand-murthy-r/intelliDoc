@@ -19,6 +19,8 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 ##  Tech Stack
 
 * **Language:** Python
+* **Framework**: Kivy Python GUI Module
+* **Backend Framework**: Flask
 * **OCR:** Tesseract-OCR
 * **NLP / LLM:** QuestGenAI (Pre-trained model)
 * **Other Tools:** NLP processing libraries
