@@ -6,7 +6,7 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ---
 
-## 🚀 Features
+##  Features
 
 *  Accepts textual documents as input
 *  Extracts text using **Tesseract OCR**
@@ -44,7 +44,7 @@ IntelliDoc is an interactive AI-driven application that automatically generates 
 
 ---
 
-## 📸 Demo
+##  Demo
 <img width="802" height="632" alt="Screenshot 2025-12-18 125234" src="https://github.com/user-attachments/assets/61dfc26a-0f44-413a-9236-d9d1d11612b2" />
 <img width="802" height="632" alt="Screenshot 2025-12-18 125411" src="https://github.com/user-attachments/assets/3a1e5813-2ac0-4feb-9b00-5d5b33451148" />
 <img width="1920" height="1040" alt="Screenshot 2025-12-18 125608" src="https://github.com/user-attachments/assets/2302d374-70e0-4558-a984-051a636b58e3" />
@@ -66,7 +66,7 @@ Contributions are welcome! Feel free to fork this repository and submit a pull r
 
 ---
 
-## 📧 Contact
+##  Contact
 
 **Anand Murthy R**
 📍 Mysore, Karnataka
